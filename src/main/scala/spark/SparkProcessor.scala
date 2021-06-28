@@ -84,6 +84,6 @@ object Runner {
       .drop("sample__parentId", "patient__parentId")
 
     //result.explain()
-    processor.transferToEs(result, "faceted-rd-index-4")
+    processor.transferToEs(result, "faceted-rd-index-5")
   }
 }
