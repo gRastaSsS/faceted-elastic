@@ -27,7 +27,7 @@ class SparkProcessor {
     typeDf.select(renamedColumns: _*)
   }
 
-  def transferToEs(df: DataFrame, indexName: String, idName: String = "id"): Unit = {
+  def transferToEs(df: DataFrame, indexName: String): Unit = {
     val batchSizeInMB = 4
     val batchEntries = 10000
     val batchRetryCount = 3
@@ -35,7 +35,6 @@ class SparkProcessor {
 
     val esConfig = Map(
       "es.resource" -> indexName,
-      "es.mapping.id" -> idName,
       "es.batch.size.bytes" -> (batchSizeInMB * 1024 * 1024).toString,
       "es.batch.size.entries" -> batchEntries.toString,
       "es.batch.write.retry.count" -> batchRetryCount.toString,
@@ -80,7 +79,6 @@ object Runner {
     )
 
     val result = fullPathSampleDf
-      .withColumnRenamed("sample__id", "id")
       .drop("sample__parentId", "patient__parentId")
 
     //result.explain()
