@@ -1,0 +1,44 @@
+{
+  "model_tree": {
+    "nodes": [
+      {"parent": "study", "child": "patient"},
+      {"parent": "patient", "child": "sample"}
+    ]
+  },
+
+  "transformer": {
+    "name": "Test",
+    "output": "elasticsearch",
+    "root": "study",
+
+    "root_facts": {
+      "has_properties": [
+        {"name": "country"},
+        {"name": "type"}
+      ],
+      "has_successors_with_properties": [
+        {
+          "successor_type": "sample",
+          "names": ["type", "organ"]
+        }
+      ],
+      "aggregates_successors": [
+        {
+          "successor_type": "patient",
+          "funcs": ["count(_id)"],
+          "export_name": "patients_total"
+        },
+        {
+          "successor_type": "patient",
+          "funcs": ["groupBy(age)", "count(_id)"],
+          "export_name": "patients_per_age"
+        },
+        {
+          "successor_type": "sample",
+          "funcs": ["set(type)"],
+          "export_name": "sample_types"
+        }
+      ]
+    }
+  }
+}

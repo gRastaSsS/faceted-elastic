@@ -1,12 +1,13 @@
 package spark
 
-import org.apache.spark.sql.functions.col
+import org.apache.spark.sql.functions.{col, count}
 import org.apache.spark.sql.{DataFrame, SparkSession}
 import org.elasticsearch.spark.sql._
+import parser.{ModelTree, RootFacts, RootProperty, SuccessorProperties, Transformer}
 
 import scala.util.Random
 
-class SparkProcessor {
+class SparkProcessor(path: String) {
   private val spark = SparkSession.builder()
     .master("local[2]")
     .appName("Test.com")
@@ -17,6 +18,14 @@ class SparkProcessor {
   def getDataframe(path: String): DataFrame = {
     spark.sqlContext.read.json(path)
   }
+
+  def idField = "_id"
+
+  def parentIdField = "_parentId"
+
+  def typeField = "_table"
+
+  def mainDataframe: DataFrame = getDataframe(path)
 
   def getTypeDf(df: DataFrame, typeName: String, columnNames: Array[String]): DataFrame = {
     val columns = columnNames.map(name => df.col(name))
@@ -49,9 +58,8 @@ class SparkProcessor {
 }
 
 object Runner {
-  def main(args: Array[String]): Unit = {
-    val path = args(0)
-    val processor = new SparkProcessor()
+  def globalJoin(path: String): Unit = {
+    val processor = new SparkProcessor(path)
 
     val df = processor.getDataframe(path)
 
@@ -85,5 +93,66 @@ object Runner {
 
     //result.explain()
     processor.transferToEs(result, f"faceted-rd-index-${Random.nextInt()}")
+  }
+
+  def groupByExample(path: String): Unit = {
+    val processor = new SparkProcessor(path)
+
+    val df = processor.mainDataframe
+
+    val studyDf = processor.getTypeDf(
+      df, "study",
+      Array("_id", "country", "type")
+    )
+
+    val patientDf = processor.getTypeDf(
+      df, "patient",
+      Array("_id", "_parentId", "age", "sex")
+    )
+
+    val sampleDf = processor.getTypeDf(
+      df, "sample",
+      Array("_id", "_parentId", "type", "organ")
+    )
+
+    val fullPathPatientDf = patientDf.join(
+      studyDf,
+      col("study__id") === col("patient__parentId")
+    )
+
+    val fullPathSampleDf = sampleDf.join(
+      fullPathPatientDf,
+      col("patient__id") === col("sample__parentId")
+    )
+
+    val result = fullPathPatientDf
+      .groupBy("study__id", "patient_age")
+      .agg(count("patient__id").as("patients_per_age"))
+
+    processor.transferToEs(result, f"faceted-rd-index-${Random.nextInt()}")
+  }
+
+  def runTest(path: String): Unit = {
+    val spark = new SparkProcessor(path)
+    val pipelineBuilder = new PipelineBuilder(spark)
+
+    val df = pipelineBuilder.build(
+      ModelTree(Seq("study" -> "patient", "patient" -> "sample")),
+      Transformer(
+        "Test", "elasticsearch", "study",
+        RootFacts(
+          hasProperties = Seq(RootProperty("country")),
+          hasSuccessorsWithProperties = Seq(
+            SuccessorProperties("sample", Seq("type", "organ"))
+          )
+        )
+      )
+    )
+
+    spark.transferToEs(df, f"faceted-rd-index-${Random.nextInt()}")
+  }
+
+  def main(args: Array[String]): Unit = {
+    runTest(args(0))
   }
 }
