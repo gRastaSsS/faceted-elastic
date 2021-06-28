@@ -4,6 +4,8 @@ import org.apache.spark.sql.functions.col
 import org.apache.spark.sql.{DataFrame, SparkSession}
 import org.elasticsearch.spark.sql._
 
+import scala.util.Random
+
 class SparkProcessor {
   private val spark = SparkSession.builder()
     .master("local[2]")
@@ -82,6 +84,6 @@ object Runner {
       .drop("sample__parentId", "patient__parentId")
 
     //result.explain()
-    processor.transferToEs(result, "faceted-rd-index-5")
+    processor.transferToEs(result, f"faceted-rd-index-${Random.nextInt()}")
   }
 }
