@@ -5,10 +5,9 @@ import java.io.PrintWriter
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.module.scala.DefaultScalaModule
 
-import scala.collection.mutable
 import scala.util.Random
 
-object JsonProducer {
+object JsonGenerator {
   def main(args: Array[String]): Unit = {
     val path = args(0)
     val mapper = new ObjectMapper()
@@ -34,33 +33,48 @@ object JsonProducer {
 
     order match {
       case "depth-first" =>
-        getDataDepthFirst(studySize, patientsPerStudy, samplesPerPatient)
+        getDepthFirstData(Map(
+          "study" -> studySize,
+          "patient" -> patientsPerStudy,
+          "sample" -> samplesPerPatient
+        ))
       case "breadth-first" =>
         generateStudies(studySize) ++ generatePatients(patientSize, patientsPerStudy) ++ generateSamples(sampleSize, samplesPerPatient)
     }
   }
 
-  private def getDataDepthFirst(studySize: Int, patientsPerStudy: Int, samplesPerPatient: Int): Seq[Map[String, Any]] = {
-    val result = mutable.Buffer[Map[String, Any]]()
-    var patientId = 0
-    var sampleId = 0
+  private def getDepthFirstData(levelSizes: Map[String, Int]): Stream[Map[String, Any]] = {
 
-    for (studyId <- 0 until studySize) {
-      result.append(generateStudy(studyId))
-
-      for (_ <- 0 until patientsPerStudy) {
-        result.append(generatePatient(patientId, studyId))
-
-        for (_ <- 0 until samplesPerPatient) {
-          result.append(generateSample(sampleId, patientId))
-          sampleId += 1
-        }
-
-        patientId += 1
+    def gen(level: String, levelSize: Int, parentId: Int = 0): Stream[Map[String, Any]] = {
+      level match {
+        case "study" =>
+          if (levelSize == levelSizes("study")) Stream.empty
+          else (
+            generateStudy(levelSize)
+              #:: gen("patient", 0, parentId = levelSize)
+              #::: gen("study", levelSize + 1)
+            )
+        case "patient" =>
+          if (levelSize == levelSizes("patient")) Stream.empty
+          else {
+            val id = parentId * levelSizes("patient") + levelSize
+            (generatePatient(id, parentId)
+              #:: gen("sample", 0, parentId = id)
+              #::: gen("patient", levelSize + 1, parentId)
+              )
+          }
+        case "sample" =>
+          if (levelSize == levelSizes("sample")) Stream.empty
+          else {
+            val id = parentId * levelSizes("sample") + levelSize
+            (generateSample(id, parentId)
+              #:: gen("sample", levelSize + 1, parentId)
+              )
+          }
       }
     }
 
-    result
+    gen("study", 0)
   }
 
   private def generateStudies(size: Int): Seq[Map[String, Any]] = {
