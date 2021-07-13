@@ -14,24 +14,39 @@ class PipelineBuilder(private val spark: SparkProcessor) {
   def build(model: ModelTree, trans: Transformer): DataFrame = {
     val df = spark.mainDataframe
 
-    val typeDfs = model.transitions
-      .map(t => t._1)
-      .map(typeName => typeName -> typeDf(df, typeName))
+    val typeDfs = model.nodeNames
+      .map(typeName => typeName -> createDataLayer(df, typeName))
       .toMap
 
     buildRootProperties(typeDfs, trans.root, trans.rootFacts.hasProperties)
   }
 
-  private def buildRootProperties(dfs: Map[String, DataFrame], root: String, properties: Seq[RootProperty]): DataFrame = {
+  private def buildRootProperties(dfs: Map[String, DataLayer], root: String, properties: Seq[RootProperty]): DataFrame = {
     val columns = (Seq(idField, parentIdField) ++: properties.map(p => p.name))
       .map(name => col(columnPrefix(name, root)))
 
-    dfs(root).select(columns: _*)
+    dfs(root).df.select(columns: _*)
   }
 
-  private def typeDf(df: DataFrame, typeName: String): DataFrame = {
+  private def buildSuccessorProperties(model: ModelTree,
+                                       dfs: Map[String, DataLayer],
+                                       root: String,
+                                       properties: Seq[SuccessorProperties]): DataFrame = {
+
+
+
+    dfs(root).df
+  }
+
+  private def createDataLayer(df: DataFrame, typeName: String): DataLayer = {
     val typeDf = df.filter(col(typeField) === typeName)
     val renamedColumns = typeDf.columns.map(c => typeDf(c).as(columnPrefix(c, typeName)))
-    typeDf.select(renamedColumns: _*)
+    val typeDfRenamed = typeDf.select(renamedColumns: _*)
+
+    DataLayer(
+      idField = columnPrefix(idField, typeName),
+      parentIdField = columnPrefix(parentIdField, typeName),
+      df = typeDfRenamed
+    )
   }
 }

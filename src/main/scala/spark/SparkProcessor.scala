@@ -149,7 +149,10 @@ object Runner {
       )
     )
 
-    spark.transferToEs(df, f"faceted-rd-index-${Random.nextInt()}")
+    //spark.transferToEs(df, f"faceted-rd-index-${Random.nextInt()}")
+
+    df.write
+      .json("/Users/vladislav.gerasimov/IdeaProjects/faceted-elastic/src/test/data/output.json")
   }
 
   def main(args: Array[String]): Unit = {

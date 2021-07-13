@@ -23,3 +23,5 @@ libraryDependencies ++= Seq (
   "mysql" % "mysql-connector-java" % mysqlDriverVersion,
   "org.apache.kafka" % "kafka-clients" % "2.8.0"
 )
+
+libraryDependencies += "org.scalatest" %% "scalatest" % "3.0.8" % Test
