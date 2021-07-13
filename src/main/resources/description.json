@@ -1,8 +1,24 @@
 {
   "model_tree": {
     "nodes": [
-      {"parent": "study", "child": "patient"},
-      {"parent": "patient", "child": "sample"}
+      {
+        "name": "study",
+        "children": ["patient"],
+        "idField": "_id",
+        "parentIdField": "_parent"
+      },
+      {
+        "name": "patient",
+        "children": ["sample"],
+        "idField": "_id",
+        "parentIdField": "_parent"
+      },
+      {
+        "name": "sample",
+        "children": [],
+        "idField": "_id",
+        "parentIdField": "_parent"
+      }
     ]
   },
 

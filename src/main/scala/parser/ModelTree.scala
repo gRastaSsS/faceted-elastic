@@ -1,6 +1,8 @@
 package parser
 
-case class Node(children: Seq[Node], value: String)
+case class ConfigNode(name: String, children: Seq[String], idField: String = "_id", parentIdField: String = "_parent")
+
+private case class Node(name: String, children: Seq[Node], idField: String, parentIdField: String)
 
 class ModelTree private (private val root: Node) {
   def nodeNames: Seq[String] = nodeNames(root)
@@ -10,7 +12,7 @@ class ModelTree private (private val root: Node) {
       val result = child.children.flatMap(ch => collect(Option(child), ch))
 
       parent match {
-        case Some(parent) => (child.value -> parent.value) +: result
+        case Some(parent) => (child.name -> parent.name) +: result
         case None => result
       }
     }
@@ -29,27 +31,29 @@ class ModelTree private (private val root: Node) {
   }
 
   private def nodeNames(node: Node): Seq[String] = {
-    node.value +: node.children.flatMap(n => nodeNames(n))
+    node.name +: node.children.flatMap(n => nodeNames(n))
   }
 }
 
 object ModelTree {
-  def apply(transitions: Seq[(String, String)]): ModelTree = {
-    val fromNames = transitions.map(p => p._1).toSet
-    val toNames = transitions.map(p => p._2).toSet
+  def apply(conf: Seq[ConfigNode]): ModelTree = {
+    val nameToConf = conf map (p => p.name -> p) toMap
+
+    val fromNames = conf.map(p => p.name).toSet
+    val toNames = conf.flatMap(p => p.children).toSet
     val rootNames = fromNames diff toNames
 
     require(rootNames.size == 1, "Must be only one root")
 
-    def createNode(nodeName: String): Node = {
+    def createNode(confNode: ConfigNode): Node = {
       Node(
-        children = transitions
-          .filter(p => p._1 == nodeName)
-          .map(p => createNode(p._2)),
-        value = nodeName
+        name = confNode.name,
+        children = confNode.children.map(p => createNode(nameToConf(p))),
+        idField = confNode.idField,
+        parentIdField = confNode.parentIdField
       )
     }
 
-    new ModelTree(createNode(rootNames.head))
+    new ModelTree(createNode(nameToConf(rootNames.head)))
   }
 }

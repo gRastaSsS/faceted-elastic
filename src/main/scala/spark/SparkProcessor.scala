@@ -3,7 +3,7 @@ package spark
 import org.apache.spark.sql.functions.{col, count}
 import org.apache.spark.sql.{DataFrame, SparkSession}
 import org.elasticsearch.spark.sql._
-import parser.{ModelTree, RootFacts, RootProperty, SuccessorProperties, Transformer}
+import parser.{ConfigNode, ModelTree, RootFacts, RootProperty, SuccessorProperties, Transformer}
 
 import scala.util.Random
 
@@ -137,7 +137,11 @@ object Runner {
     val pipelineBuilder = new PipelineBuilder(spark)
 
     val df = pipelineBuilder.build(
-      ModelTree(Seq("study" -> "patient", "patient" -> "sample")),
+      ModelTree(Seq(
+        ConfigNode("study", Seq("patient")),
+        ConfigNode("patient", Seq("sample")),
+        ConfigNode("sample", Seq())
+      )),
       Transformer(
         "Test", "elasticsearch", "study",
         RootFacts(

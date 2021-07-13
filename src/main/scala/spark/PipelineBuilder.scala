@@ -38,6 +38,8 @@ class PipelineBuilder(private val spark: SparkProcessor) {
     dfs(root).df
   }
 
+  private def buildJoinDf(model: ModelTree): DataFrame = ???
+
   private def createDataLayer(df: DataFrame, typeName: String): DataLayer = {
     val typeDf = df.filter(col(typeField) === typeName)
     val renamedColumns = typeDf.columns.map(c => typeDf(c).as(columnPrefix(c, typeName)))

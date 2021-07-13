@@ -1,13 +1,14 @@
 import org.scalatest.FunSuite
 import org.scalatest.Matchers.{an, be}
-import parser.ModelTree
+import parser.{ConfigNode, ModelTree}
 
 class ModelTreeTests extends FunSuite {
   test("ModelTree.constructPredecessorsPath") {
     val tree = ModelTree(Seq(
-      "study" -> "patient",
-      "patient" -> "sample",
-      "sample" -> "tissue"
+      ConfigNode("study", Seq("patient")),
+      ConfigNode("patient", Seq("sample")),
+      ConfigNode("sample", Seq("tissue")),
+      ConfigNode("tissue", Seq()),
     ))
 
     assert(tree.getPathToPredecessor("patient", "study") === Seq("study"))
