@@ -1,10 +1,10 @@
 package parser
 
-case class ConfigNode(name: String, children: Seq[String], idField: String = "_id", parentIdField: String = "_parent")
+case class ConfigNode(name: String, children: Seq[String], fields: Seq[String] = Seq.empty)
 
-private case class Node(name: String, children: Seq[Node], idField: String, parentIdField: String)
+case class Node(name: String, children: Seq[Node], fields: Seq[String])
 
-class ModelTree private (private val root: Node) {
+class ModelTree private (val root: Node, val idField: String, val parentIdField: String, val typeField: String) {
   def nodeNames: Seq[String] = nodeNames(root)
 
   private val predecessorsMap: Map[String, String] = {
@@ -36,7 +36,18 @@ class ModelTree private (private val root: Node) {
 }
 
 object ModelTree {
-  def apply(conf: Seq[ConfigNode]): ModelTree = {
+  def constructPaths(node: Node): Seq[Seq[Node]] = {
+    node.children match {
+      case Nil => Seq(Seq(node))
+      case children: Seq[Node] => children.flatMap(child => constructPaths(child).map(node+:_))
+    }
+  }
+
+  def apply(conf: Seq[ConfigNode],
+            idField: String = "_id",
+            parentIdField: String = "_parent",
+            typeField: String = "_table"): ModelTree = {
+
     val nameToConf = conf map (p => p.name -> p) toMap
 
     val fromNames = conf.map(p => p.name).toSet
@@ -46,14 +57,9 @@ object ModelTree {
     require(rootNames.size == 1, "Must be only one root")
 
     def createNode(confNode: ConfigNode): Node = {
-      Node(
-        name = confNode.name,
-        children = confNode.children.map(p => createNode(nameToConf(p))),
-        idField = confNode.idField,
-        parentIdField = confNode.parentIdField
-      )
+      Node(confNode.name, confNode.children.map(p => createNode(nameToConf(p))), confNode.fields)
     }
 
-    new ModelTree(createNode(nameToConf(rootNames.head)))
+    new ModelTree(createNode(nameToConf(rootNames.head)), idField, parentIdField, typeField)
   }
 }

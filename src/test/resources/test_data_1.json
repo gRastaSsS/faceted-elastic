@@ -1,0 +1,4 @@
+{"_id":0, "country":"Russia", "_table":"study", "type":"clinical"}
+{"_id":0, "_parent":0, "age":11, "sex":"male", "_table":"patient"}
+{"organ":"Lung", "_id":0, "_parent":0, "_table":"sample", "type":"Type_1"}
+{"organ":"Heart", "_id":1, "_parent":0, "_table":"sample", "type":"Type_3"}

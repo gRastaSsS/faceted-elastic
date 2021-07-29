@@ -1,4 +1,4 @@
-package spark
+package sparkprocessor
 
 import org.apache.spark.sql.functions.{col, count}
 import org.apache.spark.sql.{DataFrame, SparkSession}
@@ -18,12 +18,6 @@ class SparkProcessor(path: String) {
   def getDataframe(path: String): DataFrame = {
     spark.sqlContext.read.json(path)
   }
-
-  def idField = "_id"
-
-  def parentIdField = "_parentId"
-
-  def typeField = "_table"
 
   def mainDataframe: DataFrame = getDataframe(path)
 
